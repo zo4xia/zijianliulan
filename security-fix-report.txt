@@ -1,0 +1,114 @@
+
+  
+  /**
+   * 应用反检测增强脚本
+   * 夏夏的技术靠山注：这是我们的核心安全防线，必须完整!
+   */
+> async function applyStealth(page: { send: (method: string, params?: Record<string, unknown>) => Promise<any> }) {
+    console.log('[Browserless] 🛡️ 开始应用 stealth 增强...');
+    
+    try {
+      // 1. 设置 User Agent
+      await page.send("Emulation.setUserAgentOverride", {
+        userAgent: DEFAULT_USER_AGENT,
+        acceptLanguage: "zh-CN,zh;q=0.9,en;q=0.8",
+        platform: "Win32",
+      });
+      console.log('[Browserless] ✅ User Agent 已设置');
+      
+      // 2. 设置额外的 HTTP 头
+      await page.send("Network.setExtraHTTPHeaders", {
+        headers: { 
+          "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Connection": "keep-alive",
+          "Upgrade-Insecure-Requests": "1"
+        },
+      });
+      console.log('[Browserless] ✅ HTTP Headers 已设置');
+      
+      // 3. 注入反检测脚本 - 核心防护
+      const stealthScript = `
+        (function() {
+          // 移除 WebDriver 特征
+          Object.defineProperty(navigator, 'webdriver', {
+            get: () => false,
+            configurable: true
+          });
+          
+          // 修复 language 属性
+          Object.defineProperty(navigator, 'language', {
+            get: () => 'zh-CN',
+            configurable: true
+          });
+          
+          // 修复 languages 数组
+          Object.defineProperty(navigator, 'languages', {
+            get: () => ['zh-CN', 'zh', 'en'],
+            configurable: true
+          });
+          
+          // 修复 plugins
+          Object.defineProperty(navigator, 'plugins', {
+            get: () => [1, 2, 3, 4, 5],
+            configurable: true
+          });
+          
+          // 修复 mimeTypes
+    async enableDomains() {
+      await this.page.send("Network.enable");
+      await this.page.send("Page.enable");
+      await this.page.send("Runtime.enable");
+      await this.page.send("Input.enable").catch(() => {});
+>     await applyStealth(this.page);
+    }
+  
+    async navigate(url: string) {
+      await this.page.send("Page.navigate", { url });
+    }
+  
+    async goBack() {
+      const history = await this.page.send("Page.getNavigationHistory");
+      const currentIndex = history.currentIndex ?? 0;
+      if (currentIndex > 0) {
+        const entry = history.entries[currentIndex - 1];
+        if (entry?.id !== undefined) {
+          await this.page.send("Page.navigateToHistoryEntry", { entryId: entry.id });
+        }
+      }
+    }
+  
+    async goForward() {
+      const history = await this.page.send("Page.getNavigationHistory");
+      const currentIndex = history.currentIndex ?? 0;
+      if (currentIndex < history.entries.length - 1) {
+        const entry = history.entries[currentIndex + 1];
+        if (entry?.id !== undefined) {
+          await this.page.send("Page.navigateToHistoryEntry", { entryId: entry.id });
+        }
+      }
+    }
+  
+    async reload() {
+      await this.page.send("Page.reload");
+    }
+  
+    startHarRecording() {
+      this.page.on("Network.requestWillBeSent", (params: any) => {
+        this.inflight.value += 1;
+        this.recorder.onRequestWillBeSent(params);
+      });
+      this.page.on("Network.responseReceived", (params: any) => this.recorder.onResponseReceived(params));
+      this.page.on("Network.loadingFinished", (params: any) => {
+        this.inflight.value = Math.max(0, this.inflight.value - 1);
+        this.recorder.onLoadingFinished(params);
+      });
+      this.page.on("Network.loadingFailed", (params: any) => {
+        this.inflight.value = Math.max(0, this.inflight.value - 1);
+        this.recorder.onLoadingFailed(params);
+      });
+    }
+  
+    getHar(title: string): HarLog {
+      return {
+
