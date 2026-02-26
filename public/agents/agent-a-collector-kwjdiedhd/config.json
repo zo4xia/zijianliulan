@@ -1,0 +1,163 @@
+{
+  "version": "1.0",
+  "description": "Agent A - 信息采集员",
+  
+  "_meta": {
+    "createdAt": "2026-02-24T12:00:00Z",
+    "lastModified": "2026-02-24T12:00:00Z",
+    "apiKey": "agent-a-collector-kwjdiedhd"
+  },
+  
+  "agent": {
+    "id": "agent-a-collector",
+    "name": "小采",
+    "role": "collector",
+    "emoji": "📰",
+    "apiKeyPrefix": "kwjdiedhd",
+    "personality": {
+      "tone": "认真、细致",
+      "greeting": "你好！我是小采，负责帮你采集信息~"
+    }
+  },
+  
+  "api": {
+    "enabled": true,
+    "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
+    "modelId": "qwen-max",
+    "capabilities": {
+      "vision": true,
+      "toolUse": true,
+      "streaming": true
+    },
+    "prompt": {
+      "system": "你是一个信息采集助手，负责访问指定网站并提取关键信息。请用简洁的中文回复。",
+      "user": "请访问 {url} 并帮我提取以下内容：{task}"
+    },
+    "timeout": 30000,
+    "retryAttempts": 3
+  },
+  
+  "equipment": {
+    "browserless": {
+      "enabled": true,
+      "baseUrl": "https://bbdd.zeabur.app",
+      "token": "oD5F2i78vf0hQVIu9gj1MWG4nHmLB63l",
+      "options": {
+        "headless": true,
+        "viewport": {
+          "width": 1920,
+          "height": 1080
+        },
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "args": [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage"
+        ]
+      }
+    },
+    
+    "mcpServers": [
+      {
+        "name": "dashscope-mcp",
+        "type": "sse",
+        "url": "https://dashscope.aliyuncss.com/api/v1/mcps/WebParser/sse",
+        "headers": {
+          "Authorization": "Bearer sk-eb168c1b6996464faaa3ece4095528ab"
+        },
+        "tools": [
+          "web-parser",
+          "content-extractor"
+        ]
+      },
+      {
+        "name": "feishu-mcp",
+        "type": "http",
+        "url": "http://localhost:3005/mcp/feishu",
+        "config": {
+          "webhookUrl": "https://open.feishu.cn/open-apis/bot/v2/hook/xxx"
+        },
+        "tools": [
+          "send-message",
+          "create-task"
+        ]
+      }
+    ],
+    
+    "localAgent": {
+      "enabled": false,
+      "endpoint": "http://localhost:8080/agent",
+      "apiKey": "local-agent-key-xxx",
+      "protocol": "http"
+    }
+  },
+  
+  "cache": {
+    "enabled": true,
+    "type": "memory",
+    "ttl": 3600,
+    "maxSize": 100,
+    "file": "./cache/session-cache.json",
+    "cleanupSchedule": "0 * * * *"
+  },
+  
+  "fingerprint": {
+    "enabled": true,
+    "profileId": "win10-chrome-120",
+    "antiDetection": {
+      "canvas": true,
+      "webgl": true,
+      "webDriver": true,
+      "timezone": "Asia/Shanghai",
+      "language": "zh-CN"
+    },
+    "regenerateOnDemand": true
+  },
+  
+  "task": {
+    "enabled": true,
+    "targets": [
+      {
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com",
+        "description": "采集最新 AI 新闻标题和摘要",
+        "schedule": "0 9 * * *",
+        "returnFields": [
+          "title",
+          "summary",
+          "publishTime",
+          "link"
+        ]
+      }
+    ],
+    
+    "credentials": {
+      "requireLogin": false,
+      "poolId": "shared-pool-1",
+      "autoLogin": false
+    },
+    
+    "webhook": {
+      "onSuccess": {
+        "enabled": true,
+        "url": "https://your-server.com/webhook/task-success"
+      },
+      "onFailure": {
+        "enabled": true,
+        "url": "https://your-server.com/webhook/task-failure"
+      },
+      "onNeedHelp": {
+        "enabled": true,
+        "url": "https://your-server.com/webhook/need-help",
+        "includeScreenshot": true
+      }
+    }
+  },
+  
+  "logging": {
+    "level": "info",
+    "file": "./logs/agent-a.log",
+    "maxFiles": 7,
+    "console": true
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "description": "Agent 家园总名单 - 每个小家伙都有自己的家",
+  "lastUpdated": "2026-02-24T12:00:00Z",
+  
+  "agents": [
+    {
+      "id": "agent-a-collector",
+      "name": "小采",
+      "role": "collector",
+      "emoji": "📰",
+      "configPath": "agent-a-collector/config.json",
+      "status": "active",
+      "lastActiveAt": null,
+      "createdAt": "2026-02-24T12:00:00Z"
+    },
+    {
+      "id": "agent-b-messenger",
+      "name": "小信",
+      "role": "messenger",
+      "emoji": "🕊️",
+      "configPath": "agent-b-messenger/config.json",
+      "status": "active",
+      "lastActiveAt": null,
+      "createdAt": "2026-02-24T12:00:00Z"
+    },
+    {
+      "id": "agent-c-social",
+      "name": "小宣",
+      "role": "social_manager",
+      "emoji": "📱",
+      "configPath": "agent-c-social/config.json",
+      "status": "active",
+      "lastActiveAt": null,
+      "createdAt": "2026-02-24T12:00:00Z"
+    }
+  ],
+  
+  "publicResources": {
+    "steelSessionPool": "shared",
+    "redisPubSub": "shared",
+    "mcpToolLibrary": "shared",
+    "userConsole": "shared"
+  }
+}

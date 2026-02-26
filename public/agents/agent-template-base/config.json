@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "description": "Agent 基础模板 - 可复制此模板创建新 Agent",
+  
+  "agent": {
+    "id": "agent-template-base",
+    "name": "小特工模板",
+    "role": "messenger",
+    "emoji": "🤖",
+    "apiKey": "${AGENT_API_KEY}",
+    "personality": {
+      "tone": "温暖、友好",
+      "greeting": "你好呀！我是你的新助手~"
+    }
+  },
+  
+  "api": {
+    "provider": "gemini|claude|qwen",
+    "keys": [
+      "${API_KEY_1}"
+    ],
+    "baseUrl": "https://official-website.com",
+    "model": "latest"
+  },
+  
+  "mcp": {
+    "tools": [
+      {
+        "id": "browser-navigate",
+        "name": "浏览器导航",
+        "enabled": true
+      },
+      {
+        "id": "visual-capture",
+        "name": "视觉捕获",
+        "enabled": true,
+        "description": "让不支持视觉的小 Agent 也能知道页面情况"
+      }
+    ]
+  },
+  
+  "task": {
+    "type": "chat|scrape|post",
+    "description": "请描述具体任务...",
+    "websites": [],
+    "schedule": null
+  },
+  
+  "fingerprint": {
+    "useDedicated": true,
+    "profileId": null
+  },
+  
+  "credentials": {
+    "requireLogin": true,
+    "loginUrl": "https://official-website.com/login",
+    "status": "pending"
+  },
+  
+  "antiDetection": {
+    "enabled": true,
+    "strictMode": true
+  }
+}

@@ -1,0 +1,357 @@
+// Fingerprint Nexus Pro - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 浏览器指纹表
+model Fingerprint {
+  id              String    @id @default(cuid())
+  hash            String    @unique
+  data            String    // JSON存储完整指纹数据
+  userAgent       String?
+  platform        String?
+  language        String?
+  screenWidth     Int?
+  screenHeight    Int?
+  timezone        String?
+  deviceMemory    Float?
+  cpuCores        Int?
+  canvas          String?   // Canvas指纹哈希
+  webgl           String?   // WebGL指纹哈希
+  audio           String?   // Audio指纹哈希
+  similarityScore Float?
+  isNaturalized   Boolean   @default(false)
+  status          String    @default("active") // active, inactive, expired
+  tags            String?   // 指纹标签（逗号分隔）
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastUsedAt      DateTime?
+  
+  // 关联
+  history       FingerprintHistory[]
+  sessions      SteelSession[]
+  modelBindings ModelBinding[]
+  
+  @@index([hash])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// 指纹历史记录（用于回滚）
+model FingerprintHistory {
+  id             String   @id @default(cuid())
+  fingerprintId  String
+  fingerprint    Fingerprint @relation(fields: [fingerprintId], references: [id], onDelete: Cascade)
+  oldData        String   // 旧指纹数据JSON
+  newData        String   // 新指纹数据JSON
+  changeReason   String?  // naturalization, batch_update, rollback, manual
+  similarityScore Float?  // 变更时的相似度
+  createdAt      DateTime @default(now())
+  
+  @@index([fingerprintId])
+  @@index([createdAt])
+}
+
+// Steel浏览器会话
+model SteelSession {
+  id             String   @id @default(cuid())
+  sessionId      String   @unique
+  fingerprintId  String?
+  fingerprint    Fingerprint? @relation(fields: [fingerprintId], references: [id], onDelete: SetNull)
+  sessionData    String?  // 会话数据JSON
+  qrCodeUrl      String?  // 二维码URL
+  viewerUrl      String?  // 实时查看URL
+  status         String   @default("created") // created, active, closed
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime?
+  
+  @@index([sessionId])
+  @@index([status])
+}
+
+// 多模型绑定表
+model ModelBinding {
+  id            String   @id @default(cuid())
+  fingerprintId String
+  fingerprint   Fingerprint @relation(fields: [fingerprintId], references: [id], onDelete: Cascade)
+  
+  // 模型配置
+  modelName     String   // qwen, zhipu, deepseek, kimi, chatgpt
+  displayName   String?  // 显示名称
+  apiEndpoint   String?  // API地址
+  apiToken      String?  // 加密存储的Token
+  permissions   String?  // JSON权限列表
+  
+  // 使用统计
+  usageCount    Int      @default(0)
+  lastUsedAt    DateTime?
+  lastError     String?  // 最后一次错误
+  
+  status        String   @default("active") // active, inactive, error
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([fingerprintId, modelName])
+  @@index([modelName])
+  @@index([status])
+}
+
+// 系统日志
+model SystemLog {
+  id        String   @id @default(cuid())
+  type      String   // 日志类型
+  message   String   // 日志消息
+  data      String?  // 附加数据JSON
+  level     String   @default("info") // info, success, warning, error
+  createdAt DateTime @default(now())
+  
+  @@index([type])
+  @@index([level])
+  @@index([createdAt])
+}
+
+// 系统配置
+model SystemConfig {
+  id        String @id @default(cuid())
+  key       String @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// 定时任务记录
+model ScheduledTask {
+  id          String   @id @default(cuid())
+  taskType    String   // fingerprint_update, cleanup, sync
+  status      String   @default("pending") // pending, running, completed, failed
+  startedAt   DateTime?
+  completedAt DateTime?
+  result      String?  // JSON结果
+  error       String?  // 错误信息
+  createdAt   DateTime @default(now())
+  
+  @@index([taskType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// 反检测配置
+model AntiDetectionProfile {
+  id          String   @id @default(cuid())
+  name        String   @unique  // 配置名称
+  description String?
+  
+  // 引擎选择
+  engine      String   @default("camoufox") // steel, camoufox, hybrid
+  
+  // 指纹配置 JSON
+  fingerprintConfig String // JSON: { profile, os, browser, screen, canvas, audio }
+  
+  // 网络配置 JSON
+  networkConfig    String? // JSON: { proxy, webrtc, timezone }
+  
+  // 行为配置 JSON
+  behaviorConfig   String? // JSON: { mouse, scroll, typing, pageLoad }
+  
+  // 规避配置 JSON
+  evasionConfig    String? // JSON: { webdriver, automation, chromeLeaks, headless }
+  
+  // 检测评分
+  lastScore       Float?
+  lastTestAt      DateTime?
+  
+  // 使用统计
+  usageCount      Int      @default(0)
+  
+  // 状态
+  isDefault       Boolean  @default(false)
+  status          String   @default("active") // active, testing, error
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([name])
+  @@index([engine])
+  @@index([status])
+}
+
+// 反检测测试记录
+model DetectionTestResult {
+  id              String   @id @default(cuid())
+  profileId       String?
+  
+  // 测试网站
+  testSite        String   // browserleaks, creepjs, pixelscan, etc.
+  testUrl         String
+  
+  // 检测结果 JSON
+  results         String   // JSON: { overall, details, warnings }
+  
+  // 截图 (base64)
+  screenshot      String?
+  
+  // 状态
+  status          String   @default("pending") // pending, completed, failed
+  errorMessage    String?
+  
+  testedAt        DateTime @default(now())
+  
+  @@index([profileId])
+  @@index([testSite])
+  @@index([testedAt])
+}
+
+// 浏览器任务配置
+model BrowserTask {
+  id              String   @id @default(cuid())
+  name            String   // 任务名称
+  description     String?
+  
+  // 目标网站
+  targetUrl       String   // 要访问的网址
+  
+  // 执行规则 JSON
+  rules           String   // JSON: [{ type: 'click', selector: '...' }, { type: 'input', selector: '...', value: '...' }]
+  
+  // AI 提示词（用于智能操作）
+  aiPrompt        String?  // 给 AI 的操作提示
+  
+  // 登录配置
+  loginRequired   Boolean  @default(false)
+  loginType       String?  // qrcode, cookie, credential
+  
+  // 关联指纹
+  fingerprintId   String?
+  
+  // 定时设置
+  scheduleEnabled Boolean  @default(false)
+  scheduleCron    String?  // cron 表达式
+  
+  // 重试设置
+  maxRetries      Int      @default(3)
+  timeout         Int      @default(30000) // 毫秒
+  
+  // 代理设置 JSON
+  proxyConfig     String?  // JSON: { server, port, username, password }
+  
+  // 输出配置 JSON
+  outputConfig    String?  // JSON: { screenshot: true, html: true, cookies: true }
+  
+  // 状态
+  status          String   @default("active") // active, paused, archived
+  
+  // 使用统计
+  runCount        Int      @default(0)
+  lastRunAt       DateTime?
+  lastResult      String?  // 最后一次执行结果 JSON
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([name])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// 任务执行记录
+model TaskExecution {
+  id              String   @id @default(cuid())
+  taskId          String
+  
+  // 执行配置快照
+  targetUrl       String
+  rulesSnapshot   String   // 执行时的规则快照
+  
+  // Steel 会话
+  sessionId       String?  // Steel session ID
+  sessionUrl      String?  // 会话查看 URL
+  qrCodeUrl       String?  // 登录二维码 URL
+  
+  // 执行结果
+  status          String   @default("pending") // pending, running, completed, failed, waiting_login
+  result          String?  // JSON 执行结果
+  
+  // 输出数据
+  screenshot      String?  // base64 截图
+  htmlContent     String?  // 页面 HTML
+  cookies         String?  // JSON cookies
+  extractedData   String?  // JSON 提取的数据
+  
+  // 错误信息
+  errorMessage    String?
+  errorStack      String?
+  
+  // 时间记录
+  startedAt       DateTime?
+  completedAt     DateTime?
+  duration        Int?     // 毫秒
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([taskId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// 对外 API 密钥
+model ExternalApiKey {
+  id              String   @id @default(cuid())
+  name            String   // 密钥名称
+  apiKey          String   @unique // API 密钥
+  
+  // 权限配置
+  permissions     String   // JSON: ['task:create', 'task:execute', 'task:result', 'session:view']
+  
+  // 速率限制
+  rateLimit       Int      @default(100) // 每小时请求数
+  rateLimitPeriod String   @default("hour") // hour, day
+  
+  // 关联指纹（可选，指定使用哪个指纹）
+  fingerprintId   String?
+  
+  // 使用统计
+  requestCount    Int      @default(0)
+  lastUsedAt      DateTime?
+  
+  // 状态
+  status          String   @default("active") // active, revoked, expired
+  expiresAt       DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([apiKey])
+  @@index([status])
+}
+
+// API 调用日志
+model ApiCallLog {
+  id              String   @id @default(cuid())
+  apiKeyId        String?
+  
+  // 请求信息
+  endpoint        String   // 请求的端点
+  method          String   // GET, POST, etc.
+  requestBody     String?  // JSON 请求体
+  ipAddress       String?
+  userAgent       String?
+  
+  // 响应信息
+  statusCode      Int?
+  responseTime    Int?     // 毫秒
+  responseSize    Int?     // 字节
+  
+  // 状态
+  status          String   @default("success") // success, error, rate_limited
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([apiKeyId])
+  @@index([endpoint])
+  @@index([createdAt])
+}
